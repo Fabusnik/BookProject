@@ -1,0 +1,38 @@
+table {
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid black;
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+}
+
+table.edit,
+table.edit th,
+table.edit td {
+    border: none;
+    padding: 3px;
+}
+
+table.navigation,
+table.navigation tr,
+table.navigation td {
+    border: none;
+}
+
+input {
+    width: 500px;
+}
+
+.notification {
+    text-align: center;
+    width: 300%;
+    padding: 3px;
+    margin: 3px;
+    background: darkorange;
+    color: black;
+}

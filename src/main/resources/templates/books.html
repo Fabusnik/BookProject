@@ -1,0 +1,175 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Books</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link th:href="@{/main.css}" href="/main.css"  rel="stylesheet" type="text/css"  />
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        function show_error(msg) {
+            var div = document.createElement("div");
+            div.setAttribute("class", "notification");
+            div.id = "notification-" + Math.floor(Math.random() * 1000000);
+            div.innerHTML = msg;
+
+            // Remove the notification automatically after 6 seconds timeout.
+            setTimeout(function() {
+                var element = document.getElementById(div.id);
+                element.parentNode.removeChild(element);
+            }, 6000);
+
+            document.getElementById("notifications").appendChild(div);
+        }
+
+        function request_finished() {
+            if (this.status !== 200) {
+                var response = JSON.parse(this.responseText);
+                show_error(response.message);
+            } else {
+                location.reload();
+            }
+        }
+
+        // Deletes the book using DELETE request.
+        function delete_book(id) {
+            var request = new XMLHttpRequest();
+            request.open("DELETE", "/v1/books/" + id);
+            request.addEventListener("loadend", request_finished);
+            request.send();
+        }
+
+        // Marks the book as read using POST request.
+        function mark_read(id) {
+            var request = new XMLHttpRequest();
+            request.open("POST", "/v1/books/" + id + "/read");
+            request.addEventListener("loadend", request_finished);
+            request.send();
+        }
+
+        // Handler for the "apply filters" button.
+        function apply_filters() {
+            location.href="/books?page=0&" + build_filter_string();
+        }
+
+        // Helper function for building URL with search parameters.
+        function build_filter_string() {
+            var params = [];
+            add_input("substring", params);
+            add_input("before", params);
+            add_input("after", params);
+
+            var unread_checkbox = document.getElementById("unread");
+            params.push("unread=" + unread_checkbox.checked);
+
+            return params.join("&");
+        }
+
+        // Helper function for gathering search input values.
+        function add_input(input_id, result) {
+            var element = document.getElementById(input_id);
+            var text = element.value.trim();
+            if (text.length !== 0) {
+                result.push(input_id + "=" + text);
+            }
+        }
+        /*]]>*/
+    </script>
+</head>
+<body>
+
+<!-- div for notifications, top center of the page -->
+<div id="notifications" style="display:table; margin-left: auto; margin-right: auto;">
+</div>
+
+<h2>Search filters:</h2>
+<table class="edit">
+    <tr>
+        <td>Substring:</td>
+        <td colspan="2"><input id="substring" th:value="${#httpServletRequest.getParameter('substring')}"/></td>
+    </tr>
+    <tr>
+        <td>Printed before:</td>
+        <td colspan="2"><input id="before" th:value="${#httpServletRequest.getParameter('before')}"/></td>
+    </tr>
+    <tr>
+        <td>Printed after:</td>
+        <td colspan="2"><input id="after" th:value="${#httpServletRequest.getParameter('after')}"/></td>
+    </tr>
+    <tr>
+        <td>Only unread:</td>
+
+        <td>
+            <!--<input id="unread" th:value="${#httpServletRequest.getParameter('unread')}"/>-->
+            <!--<input id="unread" th:value="${param.unread}"/>-->
+            <!--<p th:text="${param.unread}"></p>-->
+            <input style="width: auto;" id="unread" type="checkbox" th:if="${#httpServletRequest.getParameter('unread')} != 'true'"/>
+            <input style="width: auto;" id="unread" type="checkbox" th:if="${#httpServletRequest.getParameter('unread')} == 'true'" checked="checked"/>
+        </td>
+        <td><button style="position:relative; float: right;" th:onclick="'javascript:apply_filters()'">apply filters</button></td>
+    </tr>
+</table>
+
+<h2>List of books:</h2>
+
+<table>
+    <tr>
+        <th>Author</th>
+        <th>Title</th>
+        <th>Description</th>
+        <th>Isbn</th>
+        <th>Year</th>
+        <th>Read</th>
+        <th></th>
+        <th></th>
+    </tr>
+    <!--/*@thymesVar id="books" type="List<fab.model.Book>"*/-->
+    <!--/*@thymesVar id="book" type="fab.model.Book"*/-->
+    <tr th:each="book : ${books}">
+        <td th:text="${book.author}">author</td>
+        <td th:text="${book.title}">title</td>
+        <td th:text="${book.description}">description</td>
+        <td th:text="${book.isbn}">isbn</td>
+        <td th:text="${book.printYear}">year</td>
+        <td>
+            <div th:switch="${book.readAlready}">
+                <div th:case="${true}">Yes</div>
+                <button th:case="${false}" th:onclick="'javascript:mark_read(' + ${book.id} + ')'">Read</button>
+            </div>
+        </td>
+        <td><a th:href="@{'/edit'(id=${book.id})}">Edit</a></td>
+        <td><button th:onclick="'javascript:delete_book(' + ${book.id} + ')'">Delete</button></td>
+    </tr>
+    <tr>
+        <td colspan="8" style="padding: 0px; border: none;">
+            <!--/*@thymesVar id="pagination" type="fab.model.Pagination"*/-->
+            <table class="navigation" style="width: 100%;">
+                <tr>
+                    <td>
+                        <div th:if="${pagination.prev != -1 || pagination.next != -1}">
+    <!--/*@thymesVar id="param" type="fab.model.Filter"*/-->
+    <a th:if="${pagination.prev != -1}"
+       th:href="@{'/books'(page=${pagination.prev},substring=${param.substring},before=${param.before},after=${param.after},unread=(${#httpServletRequest.getParameter('unread')} == 'true' ? 'true':'false'))}">
+       &lt;&lt; prev. page</a>
+    <th:block th:if="${pagination.prev != -1 and pagination.next != -1}">&nbsp;&nbsp;|&nbsp;&nbsp;</th:block>
+    <a th:if="${pagination.next != -1}"
+       th:href="@{'/books'(page=${pagination.next},substring=${param.substring},before=${param.before},after=${param.after},unread=(${#httpServletRequest.getParameter('unread')} == 'true' ? 'true':'false'))}">
+       next page &gt;&gt;</a>
+                        </div>
+                    </td>
+                    <td>
+                        <a style="position:relative; float: right" th:href="@{'/edit'}">add new book</a>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <a style="position:relative; float: right" th:href="@{'/books'}">remove all filters</a>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

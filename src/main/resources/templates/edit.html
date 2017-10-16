@@ -1,0 +1,123 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Edit book</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link th:href="@{/main.css}" href="/main.css"  rel="stylesheet" type="text/css"  />
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var book_id = [[${book.id}]];  // When this is null, it means we're adding the new book.
+
+        function show_error(msg) {
+            var div = document.createElement("div");
+            div.setAttribute("class", "notification");
+            div.id = "notification-" + Math.floor(Math.random() * 1000000);
+            div.innerHTML = msg;
+
+            // Remove the notification automatically after 6 seconds timeout.
+            setTimeout(function() {
+                var element = document.getElementById(div.id);
+                element.parentNode.removeChild(element);
+            }, 6000);
+
+            document.getElementById("notifications").appendChild(div);
+        }
+
+        function request_finished() {
+            if (this.status !== 200) {
+                var response = JSON.parse(this.responseText);
+                show_error(response.message);
+            } else {
+                if (book_id === null) {
+                    // After new book creation, redirect to the book list.
+                    location.href = "/books";
+                } else {
+                    // After editing the book, show the same book again.
+                    location.reload();
+                }
+            }
+        }
+
+        function create_or_update_book(id) {
+            var request = new XMLHttpRequest();
+            if (book_id === null) {
+                request.open("POST", "/v1/books");
+            } else {
+                request.open("POST", "/v1/books/" + id);
+            }
+            request.setRequestHeader("Content-Type", "application/json");
+
+            var book = {
+                author: get_value("input_author"),
+                title: get_value("input_title"),
+                description: get_value("input_description"),
+                isbn: get_value("input_isbn"),
+                printYear: get_value("input_year")
+            };
+
+            if (book_id !== null) {
+                book.id = book_id;  // Set the id if this was an edit.
+            }
+
+            request.addEventListener("loadend", request_finished);
+            request.send(JSON.stringify(book));
+        }
+
+        function get_value(input_id) {
+            var element = document.getElementById(input_id);
+            return element.value;
+        }
+
+        /*]]>*/
+    </script>
+</head>
+<body>
+
+<!-- div for notifications, top center of the page -->
+<div id="notifications" style="display:table; margin-left: auto; margin-right: auto;">
+</div>
+
+<!--/*@thymesVar id="book" type="fab.model.Book"*/-->
+<h2 th:if="${book.id != null}">Edit book:</h2>
+<h2 th:if="${book.id == null}">Add book:</h2>
+
+<table class="edit">
+    <tr>
+        <td>Author:</td>
+        <td>
+            <!-- Forbid editing the author on book edits. -->
+            <input th:if="${book.id != null}" id="input_author" th:value="${book.author}" readonly="readonly" disabled="disabled"/>
+            <!-- Allow editing the author when creating new book. -->
+            <input th:if="${book.id == null}" id="input_author" th:value="${book.author}"/>
+        </td>
+    </tr>
+    <tr>
+        <td>Title:</td>
+        <td><input id="input_title" th:value="${book.title}"/></td>
+    </tr>
+    <tr>
+        <td>Description:</td>
+        <td><input id="input_description" th:value="${book.description}"/></td>
+    </tr>
+    <tr>
+        <td>Isbn:</td>
+        <td><input id="input_isbn" th:value="${book.isbn}"/></td>
+    </tr>
+    <tr>
+        <td>Year:</td>
+        <td><input id="input_year" th:value="${book.printYear}"/></td>
+    </tr>
+</table>
+
+<p></p>
+
+<button th:if="${book.id} != null" th:onclick="'javascript:create_or_update_book(' + ${book.id} + ')'">update existing</button>
+<button th:if="${book.id} == null" th:onclick="'javascript:create_or_update_book(' + ${book.id} + ')'">create new book</button>
+
+&nbsp;&nbsp;
+
+<a th:href="@{'/books'}">go to book list</a>
+
+</body>
+</html>
